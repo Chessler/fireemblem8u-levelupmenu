@@ -562,7 +562,7 @@ void sub_80495F4(void);
 void sub_80496A4(void);
 void sub_804970C(void);
 void sub_8049744(void);
-void sub_8049788(void);
+void LoadLinkArenaFogPlaceholder(void);
 void sub_80497A0(void);
 void sub_80497CC(void);
 void sub_8049828(void);
@@ -622,9 +622,9 @@ void sub_804AF5C(struct SioBattleMapProc * proc);
 void sub_804B190(ProcPtr proc);
 void sub_804B1C0(struct SioProc85AA4CC * proc);
 void sub_804B250(ProcPtr proc);
-void sub_804B278(void);
-void sub_804B38C(void);
-void sub_804B3A0(void);
+void LinkArenaFogSprite_Loop(void);
+void StartLinkArenaFogPlaceholders(void);
+void EndLinkArenaFogPlaceholders(void);
 void sub_804B3B0(ProcPtr proc);
 void sub_804B3D0(ProcPtr proc);
 void sub_804B408(ProcPtr proc);
@@ -633,13 +633,13 @@ void sub_804B480(struct SioBattleMapProc * proc);
 void sub_804B518(ProcPtr proc);
 void sub_804B554(struct SioBattleMapProc * proc);
 void sub_804B5E0(ProcPtr proc);
-void sub_804B604(struct SioBattleMapProc * proc);
-void sub_804B624(struct SioBattleMapProc * proc);
-void sub_804B6AC(struct SioBattleMapProc * proc);
-void sub_804B6B8(void);
-void sub_804B6CC(void);
-void sub_804B6F4(void);
-void sub_804B708(void);
+void LAUnitDeaths_Init(struct SioBattleMapProc * proc);
+void LAUnitDeaths_FindNextAndStart(struct SioBattleMapProc * proc);
+void LAUnitDeaths_EndMu(struct SioBattleMapProc * proc);
+void LAUnitDeaths_OnEnd(void);
+void LinkArena_StoreTalkChoice(void);
+void LABattleMap_StartSurrenderPrompt(void);
+void LABattleMap_StartNoDamagePrompt(void);
 void sub_804B71C(struct SioBattleMapProc * proc);
 void sub_804B76C(struct SioBattleMapProc * proc);
 void sub_804B7E4(ProcPtr proc);
@@ -1020,11 +1020,11 @@ extern CONST_DATA struct MultiArenaSaveTeam * gUnknown_085A9884;
 // extern ??? gUnknown_085AA1AC
 // extern ??? gUnknown_085AA1FC
 // extern ??? gUnknown_085AA21C
-// extern ??? gUnknown_085AA22C
-extern struct ProcCmd CONST_DATA gUnknown_085AA24C[];
-extern struct ProcCmd CONST_DATA gUnknown_085AA26C[];
-// extern ??? gUnknown_085AA2B4
-// extern ??? gUnknown_085AA2D8
+// extern ??? gLut_LinkArenaFogPlaceholder_YOffset
+extern struct ProcCmd CONST_DATA ProcScr_DrawLinkArenaFogPlaceholders[];
+extern struct ProcCmd CONST_DATA ProcScr_LASurrender_HandleUnitDeaths[];
+// extern ??? EventScr_LinkArenaSurrenderPrompt
+// extern ??? EventScr_LinkArenaNoDamagePrompt
 extern struct ProcCmd CONST_DATA gUnknown_085AA2FC[];
 extern CONST_DATA struct ProcCmd gUnknown_085AA4CC[];
 extern CONST_DATA struct ProcCmd gUnknown_085AA5BC[];
@@ -1078,7 +1078,7 @@ extern u8 Img_LinkArenaActiveBannerFx[]; // img
 extern u8 gUnknown_085ACEFC[]; // img
 extern u8 Img_LinkArenaPlacementRanks[]; // img
 extern u8 gUnknown_085AD80C[];
-extern u8 gUnknown_085AD9CC[]; // img
+extern u8 Img_LinkArena_FogUnitPlaceholder[]; // img
 extern u8 Img_LinkArenaPlayerBanners[]; // img
 extern u16 Pal_LinkArenaMenu[];
 extern u16 Pal_TacticianSelObj[];
