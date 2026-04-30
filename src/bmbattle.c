@@ -20,6 +20,7 @@
 #include "bmbattle.h"
 #include "mapanim.h"
 #include "worldmap.h"
+#include "lvup_hook.h"
 
 #include "constants/songs.h"
 #include "constants/items.h"
@@ -1259,7 +1260,8 @@ void CheckBattleUnitLevelUp(struct BattleUnit* bu) {
     if (CanBattleUnitGainLevels(bu) && bu->unit.exp >= 100) {
         int growthBonus, statGainTotal;
 
-        bu->unit.exp -= 100;
+        //bu->unit.exp -= 100;
+        bu->unit.exp = 99;
         bu->unit.level++;
 
         if (UNIT_CATTRIBUTES(&bu->unit) & CA_MAXLEVEL10) {
@@ -1294,6 +1296,7 @@ void CheckBattleUnitLevelUp(struct BattleUnit* bu) {
         statGainTotal += bu->changeRes;
 
         bu->changeLck = GetStatIncrease(bu->unit.pCharacterData->growthLck + growthBonus);
+        //bu->changeLck = 2;
         statGainTotal += bu->changeLck;
 
         if (statGainTotal == 0) {
@@ -1336,6 +1339,10 @@ void CheckBattleUnitLevelUp(struct BattleUnit* bu) {
         }
 
         CheckBattleUnitStatCaps(GetUnit(bu->unit.index), bu);
+        //LvupHook_ForceHP(bu);
+    }
+    else if (CanBattleUnitGainLevels(bu)) {
+        bu->unit.exp = 99;
     }
 }
 

@@ -34,6 +34,10 @@ EWRAM_OVERLAY(banim) u16 gEkrLvupPostStatus[EKRLVUP_STAT_MAX] = {0};
 EWRAM_OVERLAY(banim) u16 gEkrLvupScrollPos1 = 0;
 EWRAM_OVERLAY(banim) u16 gEkrLvupScrollPos2 = 0;
 EWRAM_OVERLAY(banim) int gEkrLvupApfxUnexist = false;
+EWRAM_OVERLAY(banim) s16 gEkrLvupCursorPos = 0;
+EWRAM_OVERLAY(banim) u16 gEkrLvupMaxPool = 0;
+EWRAM_OVERLAY(banim) u16 gEkrLvupPointPool = 0;
+EWRAM_OVERLAY(banim) u16 gEkrLvupAllocations[EKRLVUP_STAT_MAX] = {0};
 
 /**
  * section.data
@@ -101,6 +105,7 @@ CONST_DATA struct ProcCmd ProcScr_EkrLevelup[] = {
     PROC_REPEAT(EkrLvup_Promo_DrawPromoNewClassName),
     PROC_REPEAT(EkrLvup_Promo_WindowScroll1),
     PROC_REPEAT(EkrLvup_DrawNewLevel),
+    PROC_REPEAT(EkrLvup_StartAllocationMenu),
     PROC_REPEAT(EkrLvup_InitCounterForMainAnim),
     PROC_REPEAT(EkrLvup_MainAnime),
     PROC_REPEAT(EkrLvup_SetHBlank),
@@ -597,6 +602,167 @@ void EkrLvup_DrawNewLevel(struct ProcEkrLevelup *proc)
         proc->index = 0;
         Proc_Break(proc);
     }
+}
+
+
+// Helper: draw the cursor at the current position, erase from old
+// Call this whenever the cursor moves.
+static void EkrLvup_DrawCursor(int pos)
+{
+    int i;
+
+    // Erase both tile rows of cursor from all stat positions
+    for (i = 0; i < EKRLVUP_STAT_MAX; i++) {
+        gBG2TilemapBuffer[sEfxLvupPartsPos[i] - 1]      = 0;
+        gBG2TilemapBuffer[sEfxLvupPartsPos[i] - 1 + 32] = 0;
+    }
+
+    // Draw '>' at selected stat
+    InitText(&gBanimText[EKRLVUP_TEXT_CURSOR], 1);
+    Text_SetColor(&gBanimText[EKRLVUP_TEXT_CURSOR], TEXT_COLOR_SYSTEM_WHITE);
+    Text_DrawString(&gBanimText[EKRLVUP_TEXT_CURSOR], ">");
+    PutText(&gBanimText[EKRLVUP_TEXT_CURSOR], gBG2TilemapBuffer + sEfxLvupPartsPos[pos] - 1);
+
+    BG_EnableSyncByMask(BG2_SYNC_BIT);
+}
+
+static void EkrLvup_DrawPointPool(void)
+{
+    InitText(&gBanimText[EKRLVUP_TEXT_CURSOR + 1], 2);
+    Text_SetCursor(&gBanimText[EKRLVUP_TEXT_CURSOR + 1], 8);
+    Text_SetColor(&gBanimText[EKRLVUP_TEXT_CURSOR + 1], 
+                  gEkrLvupPointPool == 0 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_WHITE);
+    Text_DrawNumber(&gBanimText[EKRLVUP_TEXT_CURSOR + 1], gEkrLvupPointPool);
+    PutText(&gBanimText[EKRLVUP_TEXT_CURSOR + 1], TILEMAP_LOCATED(gBG2TilemapBuffer, 13, 9));
+    BG_EnableSyncByMask(BG2_SYNC_BIT);
+}
+
+static inline u16 EkrLvup_StatRoom(int stat)
+{
+    struct Unit *unit = gpEkrLvupUnit;
+    u16 base = gEkrLvupBaseStatus[stat];
+
+    switch (stat) {
+    case EKRLVUP_STAT_HP:  return (UNIT_MHP_MAX(unit) > base) ? (UNIT_MHP_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_POW: return (UNIT_POW_MAX(unit) > base) ? (UNIT_POW_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_SKL: return (UNIT_SKL_MAX(unit) > base) ? (UNIT_SKL_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_SPD: return (UNIT_SPD_MAX(unit) > base) ? (UNIT_SPD_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_DEF: return (UNIT_DEF_MAX(unit) > base) ? (UNIT_DEF_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_RES: return (UNIT_RES_MAX(unit) > base) ? (UNIT_RES_MAX(unit) - base) : 0;
+    case EKRLVUP_STAT_LCK: return (UNIT_LCK_MAX(unit) > base) ? (UNIT_LCK_MAX(unit) - base) : 0;
+    default: return 0; // CON or edge cases
+    }
+}
+
+static inline u16 EkrLvup_PointCost(int stat, u16 newAlloc)
+{
+    (void)stat;
+
+    if (newAlloc == 0)
+        return 0;
+
+    return newAlloc;
+}
+
+void EkrLvup_StartAllocationMenu(struct ProcEkrLevelup *proc)
+{
+    u16 keys = gKeyStatusPtr->newKeys;
+    bool moved = false;
+    int i;
+
+    // Return to regular RNG for Promotions
+    if (proc->is_promotion) {
+        Proc_Break(proc);
+        return;
+    }
+
+    // One-time init: draw cursor at position 0
+    if (proc->timer == 0) {
+        proc->timer = 1; // use timer as "initialized" flag
+
+        // Tally point pool from RNG results
+        gEkrLvupMaxPool = gEkrLvupPointPool = 
+            (gEkrLvupPostStatus[EKRLVUP_STAT_HP]  - gEkrLvupBaseStatus[EKRLVUP_STAT_HP])  +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_POW] - gEkrLvupBaseStatus[EKRLVUP_STAT_POW]) +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_SKL] - gEkrLvupBaseStatus[EKRLVUP_STAT_SKL]) +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_SPD] - gEkrLvupBaseStatus[EKRLVUP_STAT_SPD]) +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_DEF] - gEkrLvupBaseStatus[EKRLVUP_STAT_DEF]) +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_RES] - gEkrLvupBaseStatus[EKRLVUP_STAT_RES]) +
+            (gEkrLvupPostStatus[EKRLVUP_STAT_LCK] - gEkrLvupBaseStatus[EKRLVUP_STAT_LCK]);
+
+        // Flatten post-status to base — no gains until player allocates
+        for (i = 0; i < EKRLVUP_STAT_MAX; i++)
+            gEkrLvupPostStatus[i] = gEkrLvupBaseStatus[i];
+            gEkrLvupAllocations[i] = 0; 
+
+        gEkrLvupCursorPos = 0;
+        EkrLvup_DrawCursor(0);
+        EkrLvup_DrawPointPool();
+        return;
+    }
+
+    if (keys & DPAD_UP) {
+        if (gEkrLvupCursorPos > 0) {
+            gEkrLvupCursorPos--;
+            moved = true;
+        }
+    } else if (keys & DPAD_DOWN) {
+        if (gEkrLvupCursorPos < EKRLVUP_STAT_CON - 1) {
+            gEkrLvupCursorPos++;
+            moved = true;
+        }
+    } else if (keys & DPAD_RIGHT) {
+        u16 cur = gEkrLvupAllocations[gEkrLvupCursorPos];
+        u16 room = EkrLvup_StatRoom(gEkrLvupCursorPos);
+
+        if (cur < room) {
+            u16 cost = EkrLvup_PointCost(gEkrLvupCursorPos, cur + 1);
+
+            if (gEkrLvupPointPool >= cost) {
+                gEkrLvupAllocations[gEkrLvupCursorPos] = cur + 1;
+                gEkrLvupPointPool -= cost;
+                EkrLvup_DrawPointPool();
+            }
+        }
+    } else if (keys & DPAD_LEFT) {
+        u16 cur = gEkrLvupAllocations[gEkrLvupCursorPos];
+
+        if (cur > 0) {
+            u16 refund = EkrLvup_PointCost(gEkrLvupCursorPos, cur);
+
+            gEkrLvupAllocations[gEkrLvupCursorPos] = cur - 1;
+            gEkrLvupPointPool += refund;
+            EkrLvup_DrawPointPool();
+        }
+    }
+
+    if (moved)
+        EkrLvup_DrawCursor(gEkrLvupCursorPos);
+
+    // Only allow confirm when all points are spent
+    if ((keys & A_BUTTON) && gEkrLvupPointPool == 0) {
+    struct BattleUnit *bu = (proc->ais_main == NULL) 
+        ? gpEkrBattleUnitLeft 
+        : gpEkrBattleUnitRight;
+
+        bu->changeHP  = gEkrLvupAllocations[EKRLVUP_STAT_HP];
+        bu->changePow = gEkrLvupAllocations[EKRLVUP_STAT_POW];
+        bu->changeSkl = gEkrLvupAllocations[EKRLVUP_STAT_SKL];
+        bu->changeSpd = gEkrLvupAllocations[EKRLVUP_STAT_SPD];
+        bu->changeDef = gEkrLvupAllocations[EKRLVUP_STAT_DEF];
+        bu->changeRes = gEkrLvupAllocations[EKRLVUP_STAT_RES];
+        bu->changeLck = gEkrLvupAllocations[EKRLVUP_STAT_LCK];
+
+        gEkrLvupPostStatus[EKRLVUP_STAT_HP]  = gEkrLvupBaseStatus[EKRLVUP_STAT_HP]  + gEkrLvupAllocations[EKRLVUP_STAT_HP];
+        gEkrLvupPostStatus[EKRLVUP_STAT_POW] = gEkrLvupBaseStatus[EKRLVUP_STAT_POW] + gEkrLvupAllocations[EKRLVUP_STAT_POW];
+        gEkrLvupPostStatus[EKRLVUP_STAT_SKL] = gEkrLvupBaseStatus[EKRLVUP_STAT_SKL] + gEkrLvupAllocations[EKRLVUP_STAT_SKL];
+        gEkrLvupPostStatus[EKRLVUP_STAT_SPD] = gEkrLvupBaseStatus[EKRLVUP_STAT_SPD] + gEkrLvupAllocations[EKRLVUP_STAT_SPD];
+        gEkrLvupPostStatus[EKRLVUP_STAT_DEF] = gEkrLvupBaseStatus[EKRLVUP_STAT_DEF] + gEkrLvupAllocations[EKRLVUP_STAT_DEF];
+        gEkrLvupPostStatus[EKRLVUP_STAT_RES] = gEkrLvupBaseStatus[EKRLVUP_STAT_RES] + gEkrLvupAllocations[EKRLVUP_STAT_RES];
+        gEkrLvupPostStatus[EKRLVUP_STAT_LCK] = gEkrLvupBaseStatus[EKRLVUP_STAT_LCK] + gEkrLvupAllocations[EKRLVUP_STAT_LCK];
+
+        Proc_Break(proc);
+        }
 }
 
 void EkrLvup_InitCounterForMainAnim(struct ProcEkrLevelup *proc)

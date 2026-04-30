@@ -368,6 +368,7 @@ SECTIONS
         src/sio_multiboot.o(.text);
         src/uiutils.o(.text);
         src/uimenu.o(.text);
+        src/lvup_hook.o(.text);
         src/uiselecttarget.o(.text);
         src/banim-ekrbattle.o(.text);
         src/banim-ekrlvupfan.o(.text);

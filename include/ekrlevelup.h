@@ -8,6 +8,7 @@
 #include "efxbattle.h"
 
 #define EKR_LVUP_UI_BASE 0x50
+#define EKRLVUP_TEXT_CURSOR 19
 
 struct ProcEkrLevelup {
     PROC_HEADER;
@@ -119,6 +120,7 @@ void EkrLvup_Promo_WindowScroll0(struct ProcEkrLevelup * proc);
 void EkrLvup_Promo_DrawPromoNewClassName(struct ProcEkrLevelup * proc);
 void EkrLvup_Promo_WindowScroll1(struct ProcEkrLevelup * proc);
 void EkrLvup_DrawNewLevel(struct ProcEkrLevelup * proc);
+void EkrLvup_StartAllocationMenu(struct ProcEkrLevelup* proc);
 void EkrLvup_InitCounterForMainAnim(struct ProcEkrLevelup * proc);
 void EkrLvup_MainAnime(struct ProcEkrLevelup * proc);
 void EkrLvup_SetHBlank(struct ProcEkrLevelup * proc);
