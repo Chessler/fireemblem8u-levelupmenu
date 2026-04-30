@@ -1,6 +1,17 @@
-# Fire Emblem: The Sacred Stones
+# Fire Emblem: The Sacred Stones - Level Up Menu Edition
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+This is a personal fork of the fireemblem8u repository to work on a personal dream of mine for ages:
+A point based allocation level-up menu for Fire Emblem, instead of the RNG save scumming I always did with base game.
+As of this writing (4/30) the mod pauses on level up, shows a > next to the stat to level, and lets you allocate from a point pool.
+The point pool is derived from the rolls that happen at level-up and each loaded stat costs twice as much. E.g. +1 is 1 point, +2 is two points on top of that for a total of using 3 points to get +2 increase. +3 would be 3, requiring 6 points. You cannot level up Con from the menu (it only increases on class promotion)
+The graphics are very unsophisticated right now and the increase doesn't show, you kinda just have to watch the point tally in the upper right and feel around.
+Increase points by hitting right dpad on the selected stat, decrease by hitting left. You cannot decrease below 0 (duh). Hit A to exit the menu. You cannot hit A until all points have been allocated (to prevent me from accidentally skipping the menu by button mashing).
+
+The primary features left to be done are the graphics. It looks and feels hacky right now. Also I need to double check promotions aren't affected by my changes. I have decided to leave class promotions as random because the allocations are usually good anyway, and if they're really that bad, save scumming is a lot easier.
+
+This is probably incompatible with every other romhack out there. I made this for me and have not tested compatibility. It does run on 'real hardware' (my Analogue Pocket).
+
+## Below Be Copypasta
 
 [FE Decomp Portal](https://laqieer.github.io/fe-decomp-portal/)
 
